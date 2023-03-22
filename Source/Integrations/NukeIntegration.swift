@@ -18,6 +18,9 @@ class NukeIntegration: NSObject, AXNetworkIntegrationProtocol {
 
     fileprivate var retrieveImageTasks = NSMapTable<AXPhotoProtocol, ImageTask>(keyOptions: .strongMemory, valueOptions: .strongMemory)
 
+    typealias Progress = (_ response: ImageResponse?, _ completed: Int64, _ total: Int64) -> Void
+    typealias Completion = (_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void
+
     public func loadPhoto(_ photo: AXPhotoProtocol) {
         if photo.imageData != nil || photo.image != nil {
             AXDispatchUtils.executeInBackground { [weak self] in
@@ -29,14 +32,14 @@ class NukeIntegration: NSObject, AXNetworkIntegrationProtocol {
 
         guard let url = photo.url else { return }
         
-        let progress: ImageTask.ProgressHandler = { [weak self] (_, receivedSize, totalSize) in
+        let progress: Progress = { [weak self] (_, receivedSize, totalSize) in
             AXDispatchUtils.executeInBackground { [weak self] in
                 guard let `self` = self else { return }
                 self.delegate?.networkIntegration?(self, didUpdateLoadingProgress: CGFloat(receivedSize) / CGFloat(totalSize), for: photo)
             }
         }
         
-        let completion: ImageTask.Completion = { [weak self] (response, error) in
+        let completion: Completion = { [weak self] (response, error) in
             guard let `self` = self else { return }
             
             self.retrieveImageTasks.removeObject(forKey: photo)
